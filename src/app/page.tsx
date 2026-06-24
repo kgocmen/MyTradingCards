@@ -1,65 +1,295 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import type { ChangeEvent } from "react";
+
+import { DeckSchema } from "@/lib/deck-schema";
+import { generateDeckPdf } from "@/lib/pdf-generator";
+
+const SAMPLE_JSON = `{
+  "deckName": "My Heroes",
+  "cards": [
+    {
+      "id": "fire-hero",
+      "name": "Fire Hero",
+      "image": "fire-hero.jpg",
+      "category": "Elemental Hero",
+      "description": "Controls fire and withstands extreme temperatures.",
+      "stats": [
+        { "label": "Strength", "value": 86 },
+        { "label": "Speed", "value": 72 },
+        { "label": "Intelligence", "value": 65 },
+        { "label": "Power", "value": 91 }
+      ]
+    }
+  ]
+}`;
+
+function safeFilename(value: string): string {
+  return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-_]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+}
 
 export default function Home() {
+  const [jsonText, setJsonText] = useState(SAMPLE_JSON);
+  const [artworkFiles, setArtworkFiles] = useState<
+      Map<string, File>
+  >(new Map());
+
+  const [backFile, setBackFile] = useState<File | null>(
+      null,
+  );
+
+  const [message, setMessage] = useState(
+      "Add your JSON, card artwork, and back image.",
+  );
+
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  async function loadJsonFile(
+      event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setJsonText(await file.text());
+    setMessage(`Loaded JSON file: ${file.name}`);
+  }
+
+  function loadArtworkFiles(
+      event: ChangeEvent<HTMLInputElement>,
+  ): void {
+    const files = Array.from(event.target.files ?? []);
+    const fileMap = new Map<string, File>();
+
+    for (const file of files) {
+      fileMap.set(file.name, file);
+    }
+
+    setArtworkFiles(fileMap);
+    setMessage(`Loaded ${files.length} artwork file(s).`);
+  }
+
+  function loadBackFile(
+      event: ChangeEvent<HTMLInputElement>,
+  ): void {
+    const file = event.target.files?.[0] ?? null;
+    setBackFile(file);
+
+    if (file) {
+      setMessage(`Loaded back image: ${file.name}`);
+    }
+  }
+
+  async function createPdf(): Promise<void> {
+    setIsGenerating(true);
+
+    try {
+      let unknownJson: unknown;
+
+      try {
+        unknownJson = JSON.parse(jsonText);
+      } catch {
+        throw new Error("The JSON text is not valid JSON.");
+      }
+
+      const result = DeckSchema.safeParse(unknownJson);
+
+      if (!result.success) {
+        const issues = result.error.issues
+            .map((issue) => {
+              const path = issue.path.join(".");
+              return `${path || "JSON"}: ${issue.message}`;
+            })
+            .join("\n");
+
+        throw new Error(issues);
+      }
+
+      if (!backFile) {
+        throw new Error("Select a card-back image.");
+      }
+
+      const missingImages = result.data.cards
+          .map((card) => card.image)
+          .filter((filename) => !artworkFiles.has(filename));
+
+      if (missingImages.length > 0) {
+        throw new Error(
+            `Missing artwork files:\n${[
+              ...new Set(missingImages),
+            ].join("\n")}`,
+        );
+      }
+
+      setMessage("Rendering cards and generating PDF...");
+
+      const pdfBuffer = await generateDeckPdf(
+          result.data,
+          artworkFiles,
+          backFile,
+      );
+
+      const blob = new Blob([pdfBuffer], {
+        type: "application/pdf",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${
+          safeFilename(result.data.deckName) || "trading-cards"
+      }.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+
+      setMessage(
+          `Created ${result.data.cards.length} printable card(s).`,
+      );
+    } catch (error) {
+      const text =
+          error instanceof Error
+              ? error.message
+              : "An unexpected error occurred.";
+
+      setMessage(text);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      <main className="min-h-screen bg-slate-950 px-6 py-12 text-slate-100">
+        <div className="mx-auto max-w-5xl">
+          <header className="mb-10">
+            <p className="mb-2 font-semibold uppercase tracking-widest text-violet-400">
+              MyTradingCards
+            </p>
+
+            <h1 className="text-4xl font-bold">
+              Printable trading-card generator
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-slate-300">
+              Upload card data and artwork, then generate an
+              A4 duplex-ready PDF.
+            </p>
+          </header>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <section className="rounded-2xl bg-slate-900 p-6">
+              <h2 className="mb-4 text-xl font-semibold">
+                1. Card JSON
+              </h2>
+
+              <label className="mb-2 block text-sm text-slate-300">
+                Upload a JSON file
+              </label>
+
+              <input
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={loadJsonFile}
+                  className="mb-5 block w-full text-sm"
+              />
+
+              <label
+                  htmlFor="json"
+                  className="mb-2 block text-sm text-slate-300"
+              >
+                Or edit the JSON directly
+              </label>
+
+              <textarea
+                  id="json"
+                  value={jsonText}
+                  onChange={(event) =>
+                      setJsonText(event.target.value)
+                  }
+                  spellCheck={false}
+                  className="h-[430px] w-full rounded-xl border border-slate-700 bg-slate-950 p-4 font-mono text-sm outline-none focus:border-violet-500"
+              />
+            </section>
+
+            <section className="space-y-6">
+              <div className="rounded-2xl bg-slate-900 p-6">
+                <h2 className="mb-4 text-xl font-semibold">
+                  2. Card artwork
+                </h2>
+
+                <p className="mb-4 text-sm text-slate-300">
+                  Upload all JPG or PNG files referenced by the
+                  JSON.
+                </p>
+
+                <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    multiple
+                    onChange={loadArtworkFiles}
+                    className="block w-full text-sm"
+                />
+
+                <p className="mt-3 text-sm text-slate-400">
+                  {artworkFiles.size} artwork file(s) selected
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-900 p-6">
+                <h2 className="mb-4 text-xl font-semibold">
+                  3. Card back
+                </h2>
+
+                <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={loadBackFile}
+                    className="block w-full text-sm"
+                />
+
+                <p className="mt-3 text-sm text-slate-400">
+                  {backFile
+                      ? backFile.name
+                      : "No back image selected"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-900 p-6">
+                <h2 className="mb-4 text-xl font-semibold">
+                  4. Generate
+                </h2>
+
+                <button
+                    type="button"
+                    onClick={createPdf}
+                    disabled={isGenerating}
+                    className="w-full rounded-xl bg-violet-600 px-5 py-3 font-semibold transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isGenerating
+                      ? "Generating PDF..."
+                      : "Generate printable PDF"}
+                </button>
+
+                <pre className="mt-4 whitespace-pre-wrap rounded-xl bg-slate-950 p-4 text-sm text-slate-300">
+                {message}
+              </pre>
+              </div>
+            </section>
+          </div>
         </div>
       </main>
-    </div>
   );
 }
