@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import {
-    useMemo,
     useState,
     useSyncExternalStore,
-    type CSSProperties,
     type ChangeEvent,
 } from "react";
 
-import type {
-    Card,
-    Deck,
-    LayoutBox,
-} from "@/lib/deck-schema";
+import { CardEditPanel } from "@/app/preview/_components/card-edit-panel";
+import { CardList } from "@/app/preview/_components/card-list";
+import { CardPreview } from "@/components/card-preview";
+import type { Card } from "@/lib/deck-schema";
+import {
+    createCard,
+    safeFilename,
+    setCardImageReference,
+} from "@/lib/deck-utils";
 import { generateDeckPdf } from "@/lib/pdf-generator";
 import {
     readPdfPreviewDraft,
@@ -29,261 +31,6 @@ function getPreviewSnapshot(): PdfPreviewDraft | null {
 
 function getServerPreviewSnapshot(): null {
     return null;
-}
-
-function isRemoteUrl(value: string): boolean {
-    return /^https?:\/\//i.test(value);
-}
-
-function boxStyle(box: LayoutBox): CSSProperties {
-    const [left, bottom] = box["bottom-left"];
-    const [right, top] = box["top-right"];
-
-    return {
-        left: `${left * 100}%`,
-        top: `${(1 - top) * 100}%`,
-        width: `${(right - left) * 100}%`,
-        height: `${(top - bottom) * 100}%`,
-    };
-}
-
-function normalizeKey(value: string): string {
-    return value.trim().toLowerCase();
-}
-
-function isBackImageSlot(slotName: string): boolean {
-    return normalizeKey(slotName) === "back";
-}
-
-function getImageReference(
-    card: Card,
-    slotName: string,
-): string | undefined {
-    const entry = Object.entries(card.images ?? {}).find(
-        ([key]) => normalizeKey(key) === normalizeKey(slotName),
-    );
-
-    return entry?.[1];
-}
-
-function setImageReference(
-    card: Card,
-    slotName: string,
-    value: string,
-): Card {
-    const existingKey = Object.keys(card.images ?? {}).find(
-        (key) => normalizeKey(key) === normalizeKey(slotName),
-    );
-
-    const nextImages = {
-        ...(card.images ?? {}),
-    };
-
-    if (value.trim()) {
-        nextImages[existingKey ?? slotName] = value;
-    } else if (existingKey) {
-        delete nextImages[existingKey];
-    }
-
-    return {
-        ...card,
-        images:
-            Object.keys(nextImages).length > 0
-                ? nextImages
-                : undefined,
-    };
-}
-
-function safeId(value: string): string {
-    return value
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9-_]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-}
-
-function createCard(deck: Deck, index: number): Card {
-    const statLabels =
-        deck.layout?.information.stats.map((stat) => stat.label) ??
-        deck.cards[0]?.stats.map((stat) => stat.label) ??
-        [];
-    const name = `New Card ${index + 1}`;
-
-    return {
-        id: safeId(name),
-        name,
-        category: deck.cards[0]?.category ?? "Trading Card",
-        description: "",
-        stats: statLabels.map((label) => ({
-            label,
-            value: 0,
-        })),
-    };
-}
-
-function getImageSource(
-    reference: string | undefined,
-    files: Map<string, File>,
-): string | undefined {
-    if (!reference) {
-        return undefined;
-    }
-
-    if (isRemoteUrl(reference)) {
-        return reference;
-    }
-
-    const file = files.get(reference);
-
-    if (!file) {
-        return undefined;
-    }
-
-    return URL.createObjectURL(file);
-}
-
-function EditableImage({
-    reference,
-    files,
-    label,
-}: {
-    reference: string | undefined;
-    files: Map<string, File>;
-    label: string;
-}) {
-    const imageSource = useMemo(
-        () => getImageSource(reference, files),
-        [reference, files],
-    );
-
-    if (imageSource) {
-        return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-                src={imageSource}
-                alt=""
-                className="h-full w-full object-cover"
-                onLoad={() => {
-                    if (!isRemoteUrl(imageSource)) {
-                        URL.revokeObjectURL(imageSource);
-                    }
-                }}
-            />
-        );
-    }
-
-    return (
-        <div className="flex h-full w-full items-center justify-center bg-slate-100 p-3 text-center text-sm font-bold uppercase text-red-800">
-            {label}
-        </div>
-    );
-}
-
-function CardPreview({
-    deck,
-    card,
-    files,
-}: {
-    deck: Deck;
-    card: Card;
-    files: Map<string, File>;
-}) {
-    const layout = deck.layout;
-
-    if (!layout) {
-        return (
-            <div className="flex aspect-[5/7] w-full max-w-sm items-center justify-center rounded border border-slate-700 bg-white p-8 text-center text-slate-900">
-                {card.name}
-            </div>
-        );
-    }
-
-    return (
-        <div className="aspect-[5/7] w-full max-w-sm overflow-hidden rounded border-4 border-slate-950 bg-white shadow-2xl">
-            <div className="relative h-full w-full">
-                <div
-                    className="absolute bg-red-700 text-white"
-                    style={boxStyle(layout.title)}
-                >
-                    <div className="flex h-full flex-col items-center justify-center px-4 text-center">
-                        <div className="text-xl font-black leading-tight">
-                            {card.name}
-                        </div>
-
-                        <div className="mt-1 text-xs font-bold uppercase tracking-wide">
-                            {card.category ?? "Trading Card"}
-                        </div>
-                    </div>
-                </div>
-
-                {layout.images.image_list.map((imageLayout, index) => {
-                    if (isBackImageSlot(imageLayout.name)) {
-                        return null;
-                    }
-
-                    const reference = getImageReference(
-                        card,
-                        imageLayout.name,
-                    );
-
-                    return (
-                        <div
-                            key={imageLayout.name}
-                            className="absolute overflow-hidden border-2 border-slate-950"
-                            style={{
-                                ...boxStyle(imageLayout),
-                                zIndex: index + 1,
-                            }}
-                        >
-                            <EditableImage
-                                reference={reference}
-                                files={files}
-                                label={card.name}
-                            />
-                        </div>
-                    );
-                })}
-
-                <div
-                    className="absolute bg-white"
-                    style={boxStyle(layout.information)}
-                />
-
-                <div
-                    className="absolute px-4 py-3 text-sm font-semibold leading-tight text-slate-700"
-                    style={boxStyle(layout.information.description)}
-                >
-                    {card.description}
-                </div>
-
-                {layout.information.stats.map((statLayout, index) => {
-                    const stat = card.stats.find(
-                        (candidate) =>
-                            candidate.label === statLayout.label,
-                    );
-
-                    return (
-                        <div
-                            key={statLayout.label}
-                            className={`absolute flex items-center justify-between px-4 text-sm font-bold ${
-                                index % 2 === 0
-                                    ? "bg-slate-200"
-                                    : "bg-slate-100"
-                            }`}
-                            style={boxStyle(statLayout)}
-                        >
-                            <span className="text-slate-800">
-                                {statLayout.label}
-                            </span>
-                            <span className="text-red-800">
-                                {stat?.value ?? "-"}
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
 }
 
 export default function PreviewPage() {
@@ -375,7 +122,9 @@ export default function PreviewPage() {
         const link = document.createElement("a");
 
         link.href = url;
-        link.download = `${safeId(deck.deckName) || "trading-cards"}.json`;
+        link.download = `${
+            safeFilename(deck.deckName) || "trading-cards"
+        }.json`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -416,7 +165,7 @@ export default function PreviewPage() {
 
         currentDraft.artworkFiles.set(file.name, file);
         updateSelectedCard(
-            setImageReference(selectedCard, slotName, file.name),
+            setCardImageReference(selectedCard, slotName, file.name),
         );
     }
 
@@ -501,43 +250,13 @@ export default function PreviewPage() {
                 </header>
 
                 <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)_360px]">
-                    <aside className="rounded-xl bg-slate-900 p-3">
-                        <div className="mb-3 grid grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={addCard}
-                                className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold transition hover:bg-violet-500"
-                            >
-                                Add
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={removeSelectedCard}
-                                disabled={deck.cards.length <= 1}
-                                className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Remove
-                            </button>
-                        </div>
-
-                        <div className="space-y-2">
-                            {deck.cards.map((card, index) => (
-                                <button
-                                    key={card.id ?? card.name}
-                                    type="button"
-                                    onClick={() => setSelectedIndex(index)}
-                                    className={`w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
-                                        index === selectedIndex
-                                            ? "bg-violet-600 text-white"
-                                            : "text-slate-300 hover:bg-slate-800"
-                                    }`}
-                                >
-                                    {card.name}
-                                </button>
-                            ))}
-                        </div>
-                    </aside>
+                    <CardList
+                        cards={deck.cards}
+                        selectedIndex={selectedIndex}
+                        onSelect={setSelectedIndex}
+                        onAdd={addCard}
+                        onRemove={removeSelectedCard}
+                    />
 
                     <section className="flex min-h-[70vh] items-start justify-center rounded-xl bg-slate-900 p-6">
                         {selectedCard ? (
@@ -550,146 +269,14 @@ export default function PreviewPage() {
                     </section>
 
                     {selectedCard ? (
-                        <section className="space-y-4 rounded-xl bg-slate-900 p-5">
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-300">
-                                    Name
-                                </label>
-
-                                <input
-                                    value={selectedCard.name}
-                                    onChange={(event) =>
-                                        updateSelectedCard({
-                                            ...selectedCard,
-                                            name: event.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-violet-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-300">
-                                    Category
-                                </label>
-
-                                <input
-                                    value={selectedCard.category ?? ""}
-                                    onChange={(event) =>
-                                        updateSelectedCard({
-                                            ...selectedCard,
-                                            category: event.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-violet-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-300">
-                                    Description
-                                </label>
-
-                                <textarea
-                                    value={selectedCard.description ?? ""}
-                                    onChange={(event) =>
-                                        updateSelectedCard({
-                                            ...selectedCard,
-                                            description:
-                                                event.target.value,
-                                        })
-                                    }
-                                    className="h-24 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-violet-500"
-                                />
-                            </div>
-
-                            <div className="space-y-3">
-                                <h2 className="text-sm font-semibold text-slate-300">
-                                    Images
-                                </h2>
-
-                                {deck.layout?.images.image_list.map(
-                                    (imageLayout) => {
-                                        const reference =
-                                            getImageReference(
-                                                selectedCard,
-                                                imageLayout.name,
-                                            ) ?? "";
-
-                                        return (
-                                            <div
-                                                key={imageLayout.name}
-                                                className="space-y-2"
-                                            >
-                                                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
-                                                    {imageLayout.name}
-                                                </label>
-
-                                                <input
-                                                    value={reference}
-                                                    onChange={(event) =>
-                                                        updateSelectedCard(
-                                                            setImageReference(
-                                                                selectedCard,
-                                                                imageLayout.name,
-                                                                event
-                                                                    .target
-                                                                    .value,
-                                                            ),
-                                                        )
-                                                    }
-                                                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-violet-500"
-                                                />
-
-                                                <input
-                                                    type="file"
-                                                    accept="image/png,image/jpeg"
-                                                    onChange={(event) =>
-                                                        updateImageFile(
-                                                            imageLayout.name,
-                                                            event,
-                                                        )
-                                                    }
-                                                    className="block w-full text-xs text-slate-300"
-                                                />
-                                            </div>
-                                        );
-                                    },
-                                )}
-                            </div>
-
-                            <div className="space-y-3">
-                                <h2 className="text-sm font-semibold text-slate-300">
-                                    Stats
-                                </h2>
-
-                                {selectedCard.stats.map((stat) => (
-                                    <label
-                                        key={stat.label}
-                                        className="grid grid-cols-[1fr_90px] items-center gap-3 text-sm text-slate-300"
-                                    >
-                                        <span>{stat.label}</span>
-
-                                        <input
-                                            value={stat.value}
-                                            onChange={(event) =>
-                                                updateStat(
-                                                    stat.label,
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-violet-500"
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-
-                            {message ? (
-                                <p className="rounded-lg bg-slate-950 p-3 text-sm text-slate-300">
-                                    {message}
-                                </p>
-                            ) : null}
-                        </section>
+                        <CardEditPanel
+                            deck={deck}
+                            card={selectedCard}
+                            message={message}
+                            onChangeCard={updateSelectedCard}
+                            onChangeStat={updateStat}
+                            onChangeImageFile={updateImageFile}
+                        />
                     ) : null}
                 </div>
             </div>

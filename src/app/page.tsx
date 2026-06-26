@@ -6,22 +6,14 @@ import { useRouter } from "next/navigation";
 
 import { DeckSchema } from "@/lib/deck-schema";
 import type { Deck } from "@/lib/deck-schema";
+import {
+  getMissingLocalImages,
+  safeFilename,
+} from "@/lib/deck-utils";
 import { storePdfPreviewDraft } from "@/lib/pdf-preview-store";
 import sampleDeck from "../../public/samples/F1.json";
 
 const SAMPLE_JSON = JSON.stringify(sampleDeck, null, 2);
-
-function safeFilename(value: string): string {
-  return value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9-_]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-}
-
-function isRemoteUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value);
-}
 
 export default function Home() {
   const router = useRouter();
@@ -90,15 +82,7 @@ export default function Home() {
   }
 
   function validateArtworkFiles(deck: Deck): void {
-    const imageReferences = deck.cards.flatMap((card) => [
-      ...(card.image ? [card.image] : []),
-      ...Object.values(card.images ?? {}),
-    ]);
-
-    const missingImages = imageReferences
-        .filter((filename): filename is string => Boolean(filename))
-        .filter((filename) => !isRemoteUrl(filename))
-        .filter((filename) => !artworkFiles.has(filename));
+    const missingImages = getMissingLocalImages(deck, artworkFiles);
 
     if (missingImages.length > 0) {
       throw new Error(
