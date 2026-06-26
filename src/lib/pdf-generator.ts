@@ -24,8 +24,8 @@ const COLUMNS = 3;
 const ROWS = 3;
 const CARDS_PER_PAGE = COLUMNS * ROWS;
 
-const HORIZONTAL_GAP = 2.5 * MM_TO_POINTS;
-const VERTICAL_GAP = 3 * MM_TO_POINTS;
+const HORIZONTAL_GAP = 3 * MM_TO_POINTS;
+const VERTICAL_GAP = 4 * MM_TO_POINTS;
 
 const GRID_WIDTH =
     COLUMNS * CARD_WIDTH +
@@ -79,16 +79,12 @@ function drawCutBorder(
 export async function generateDeckPdf(
     deck: Deck,
     artworkFiles: Map<string, File>,
-    backFile: File,
 ): Promise<ArrayBuffer> {
     const pdf = await PDFDocument.create();
 
     pdf.setTitle(deck.deckName);
     pdf.setAuthor("MyTradingCards");
     pdf.setSubject("Printable trading-card deck");
-
-    const renderedBack = await renderBackToPng(backFile);
-    const embeddedBack = await pdf.embedPng(renderedBack);
 
     for (
         let pageStart = 0;
@@ -108,17 +104,11 @@ export async function generateDeckPdf(
 
         for (let index = 0; index < cards.length; index += 1) {
             const card = cards[index];
-            const artwork = artworkFiles.get(card.image);
-
-            if (!artwork) {
-                throw new Error(
-                    `The artwork file "${card.image}" is missing.`,
-                );
-            }
 
             const renderedCard = await renderCardToPng(
                 card,
-                artwork,
+                deck.layout,
+                artworkFiles,
             );
 
             const embeddedCard = await pdf.embedPng(renderedCard);
@@ -145,6 +135,12 @@ export async function generateDeckPdf(
              * Mirror columns so backs align when printing
              * portrait pages using long-edge duplex printing.
              */
+            const renderedBack = await renderBackToPng(
+                cards[index],
+                deck.layout,
+                artworkFiles,
+            );
+            const embeddedBack = await pdf.embedPng(renderedBack);
             const { x, y } = getCardPosition(index, true);
 
             backPage.drawImage(embeddedBack, {

@@ -2,28 +2,14 @@
 
 import { useState } from "react";
 import type { ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 
 import { DeckSchema } from "@/lib/deck-schema";
-import { generateDeckPdf } from "@/lib/pdf-generator";
+import type { Deck } from "@/lib/deck-schema";
+import { storePdfPreviewDraft } from "@/lib/pdf-preview-store";
+import sampleDeck from "../../public/samples/F1.json";
 
-const SAMPLE_JSON = `{
-  "deckName": "My Heroes",
-  "cards": [
-    {
-      "id": "fire-hero",
-      "name": "Fire Hero",
-      "image": "fire-hero.jpg",
-      "category": "Elemental Hero",
-      "description": "Controls fire and withstands extreme temperatures.",
-      "stats": [
-        { "label": "Strength", "value": 86 },
-        { "label": "Speed", "value": 72 },
-        { "label": "Intelligence", "value": 65 },
-        { "label": "Power", "value": 91 }
-      ]
-    }
-  ]
-}`;
+const SAMPLE_JSON = JSON.stringify(sampleDeck, null, 2);
 
 function safeFilename(value: string): string {
   return value
@@ -33,21 +19,23 @@ function safeFilename(value: string): string {
       .replace(/^-+|-+$/g, "");
 }
 
+function isRemoteUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
 export default function Home() {
+  const router = useRouter();
   const [jsonText, setJsonText] = useState(SAMPLE_JSON);
   const [artworkFiles, setArtworkFiles] = useState<
       Map<string, File>
   >(new Map());
 
-  const [backFile, setBackFile] = useState<File | null>(
-      null,
-  );
-
   const [message, setMessage] = useState(
-      "Add your JSON, card artwork, and back image.",
+      "Add your JSON and card artwork.",
   );
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isOpeningLayout, setIsOpeningLayout] = useState(false);
 
   async function loadJsonFile(
       event: ChangeEvent<HTMLInputElement>,
@@ -76,14 +64,85 @@ export default function Home() {
     setMessage(`Loaded ${files.length} artwork file(s).`);
   }
 
-  function loadBackFile(
-      event: ChangeEvent<HTMLInputElement>,
-  ): void {
-    const file = event.target.files?.[0] ?? null;
-    setBackFile(file);
+  function parseDeckFromJson(): Deck {
+    let unknownJson: unknown;
 
-    if (file) {
-      setMessage(`Loaded back image: ${file.name}`);
+    try {
+      unknownJson = JSON.parse(jsonText);
+    } catch {
+      throw new Error("The JSON text is not valid JSON.");
+    }
+
+    const result = DeckSchema.safeParse(unknownJson);
+
+    if (!result.success) {
+      const issues = result.error.issues
+          .map((issue) => {
+            const path = issue.path.join(".");
+            return `${path || "JSON"}: ${issue.message}`;
+          })
+          .join("\n");
+
+      throw new Error(issues);
+    }
+
+    return result.data;
+  }
+
+  function validateArtworkFiles(deck: Deck): void {
+    const imageReferences = deck.cards.flatMap((card) => [
+      ...(card.image ? [card.image] : []),
+      ...Object.values(card.images ?? {}),
+    ]);
+
+    const missingImages = imageReferences
+        .filter((filename): filename is string => Boolean(filename))
+        .filter((filename) => !isRemoteUrl(filename))
+        .filter((filename) => !artworkFiles.has(filename));
+
+    if (missingImages.length > 0) {
+      throw new Error(
+          `Missing artwork files:\n${[
+            ...new Set(missingImages),
+          ].join("\n")}`,
+      );
+    }
+  }
+
+  function storeDeckDraft(deck: Deck): string {
+    const filename = `${
+        safeFilename(deck.deckName) || "trading-cards"
+    }.pdf`;
+
+    storePdfPreviewDraft({
+        deck,
+        filename,
+        artworkFiles,
+    });
+
+    return filename;
+  }
+
+  async function editLayout(): Promise<void> {
+    setIsOpeningLayout(true);
+
+    try {
+      const deck = parseDeckFromJson();
+
+      storeDeckDraft(deck);
+      setMessage(
+          "Opening layout editor...",
+      );
+      router.push("/layout");
+    } catch (error) {
+      const text =
+          error instanceof Error
+              ? error.message
+              : "An unexpected error occurred.";
+
+      setMessage(text);
+    } finally {
+      setIsOpeningLayout(false);
     }
   }
 
@@ -91,74 +150,16 @@ export default function Home() {
     setIsGenerating(true);
 
     try {
-      let unknownJson: unknown;
+      const deck = parseDeckFromJson();
 
-      try {
-        unknownJson = JSON.parse(jsonText);
-      } catch {
-        throw new Error("The JSON text is not valid JSON.");
-      }
-
-      const result = DeckSchema.safeParse(unknownJson);
-
-      if (!result.success) {
-        const issues = result.error.issues
-            .map((issue) => {
-              const path = issue.path.join(".");
-              return `${path || "JSON"}: ${issue.message}`;
-            })
-            .join("\n");
-
-        throw new Error(issues);
-      }
-
-      if (!backFile) {
-        throw new Error("Select a card-back image.");
-      }
-
-      const missingImages = result.data.cards
-          .map((card) => card.image)
-          .filter((filename) => !artworkFiles.has(filename));
-
-      if (missingImages.length > 0) {
-        throw new Error(
-            `Missing artwork files:\n${[
-              ...new Set(missingImages),
-            ].join("\n")}`,
-        );
-      }
-
-      setMessage("Rendering cards and generating PDF...");
-
-      const pdfBuffer = await generateDeckPdf(
-          result.data,
-          artworkFiles,
-          backFile,
-      );
-
-      const blob = new Blob([pdfBuffer], {
-        type: "application/pdf",
-      });
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `${
-          safeFilename(result.data.deckName) || "trading-cards"
-      }.pdf`;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      window.setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 1000);
+      validateArtworkFiles(deck);
+      storeDeckDraft(deck);
 
       setMessage(
-          `Created ${result.data.cards.length} printable card(s).`,
+          `Prepared ${deck.cards.length} printable card(s). Opening preview...`,
       );
+
+      router.push("/preview");
     } catch (error) {
       const text =
           error instanceof Error
@@ -250,21 +251,19 @@ export default function Home() {
 
               <div className="rounded-2xl bg-slate-900 p-6">
                 <h2 className="mb-4 text-xl font-semibold">
-                  3. Card back
+                  3. Edit layout
                 </h2>
 
-                <input
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    onChange={loadBackFile}
-                    className="block w-full text-sm"
-                />
-
-                <p className="mt-3 text-sm text-slate-400">
-                  {backFile
-                      ? backFile.name
-                      : "No back image selected"}
-                </p>
+                <button
+                    type="button"
+                    onClick={editLayout}
+                    disabled={isOpeningLayout}
+                    className="w-full rounded-xl border border-slate-700 px-5 py-3 font-semibold transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isOpeningLayout
+                      ? "Opening layout..."
+                      : "Edit layout from JSON"}
+                </button>
               </div>
 
               <div className="rounded-2xl bg-slate-900 p-6">
@@ -280,7 +279,7 @@ export default function Home() {
                 >
                   {isGenerating
                       ? "Generating PDF..."
-                      : "Generate printable PDF"}
+                      : "Preview printable PDF"}
                 </button>
 
                 <pre className="mt-4 whitespace-pre-wrap rounded-xl bg-slate-950 p-4 text-sm text-slate-300">

@@ -1,0 +1,204 @@
+{
+  "deckName": "Formula 1 Grid",
+  "layout": {
+    "title": {
+      "bottom-left": [0,0.9],
+      "top-right": [1,1]
+    },
+    "images": {
+      "image_list":[
+        {
+          "name": "photo",
+          "bottom-left": [0,0.5],
+          "top-right": [0.6,0.9]
+        },
+        {
+          "name": "flag",
+          "shape": "circle",
+          "bottom-left": [0.6, 0.7],
+          "top-right": [1, 0.9]
+        },
+        {
+          "name": "team",
+          "bottom-left": [0.6, 0.5],
+          "top-right": [1, 0.7]
+        },
+        {
+          "name": "back",
+          "bottom-left": [0.6, 0.5],
+          "top-right": [1, 0.7]
+        }
+      ],
+      "bottom-left": [0,0.5],
+      "top-right": [1,0.9]
+    },
+    "information": {
+      "bottom-left": [0,0],
+      "top-right": [1,0.5],
+      "description": {
+        "bottom-left": [0,0.4],
+        "top-right": [1,0.5]
+      },
+      "stats": [
+        { "label": "Pace", "bottom-left": [0,0.3], "top-right": [1, 0.4] },
+        { "label": "Racecraft", "bottom-left": [0,0.2], "top-right": [1,0.3]  },
+        { "label": "Qualifying", "bottom-left": [0,0.1], "top-right": [1,0.2]  },
+        { "label": "Tyre Care", "bottom-left": [0,0], "top-right": [1,0.1]  }
+      ]
+    }
+  },
+  "cards": [
+    {
+      "id": "max-verstappen",
+      "name": "Max Verstappen",
+      "images": {
+        "Photo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4Y8XdGgBA9IqMtWUm1aBTTDx4S-gDsCSEHvOkTNN0AlLNAmdbdtxfSmA&s=10",
+        "Flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Flag_of_the_Netherlands.svg/960px-Flag_of_the_Netherlands.svg.png",
+        "Team": "https://e7.pngegg.com/pngimages/424/256/png-clipart-redbull-logo-red-bull-energy-drink-desktop-krating-daeng-logo-red-bull-mammal-carnivoran-thumbnail.png"
+      },
+      "category": "Driver",
+      "description": "Relentless front-runner with elite race pace and wet-weather control.",
+      "stats": [
+        { "label": "Pace", "value": 98 },
+        { "label": "Racecraft", "value": 96 },
+        { "label": "Qualifying", "value": 95 },
+        { "label": "Tyre Care", "value": 92 }
+      ]
+    },
+    {
+      "id": "lando-norris",
+      "name": "Lando Norris",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/1920px-Flag_of_the_United_Kingdom.svg.png"
+      },
+      "category": "Driver",
+      "description": "Fast, precise, and increasingly clinical when fighting at the sharp end.",
+      "stats": [
+        { "label": "Pace", "value": 94 },
+        { "label": "Racecraft", "value": 91 },
+        { "label": "Qualifying", "value": 93 },
+        { "label": "Tyre Care", "value": 90 }
+      ]
+    },
+    {
+      "id": "charles-leclerc",
+      "name": "Charles Leclerc",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Flag_of_Monaco.svg/1920px-Flag_of_Monaco.svg.png"
+      },
+      "category": "Driver",
+      "description": "Electric over one lap and fearless when attacking narrow openings.",
+      "stats": [
+        { "label": "Pace", "value": 93 },
+        { "label": "Racecraft", "value": 90 },
+        { "label": "Qualifying", "value": 97 },
+        { "label": "Tyre Care", "value": 87 }
+      ]
+    },
+    {
+      "id": "lewis-hamilton",
+      "name": "Lewis Hamilton",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/1920px-Flag_of_the_United_Kingdom.svg.png"
+      },
+      "category": "Driver",
+      "description": "Record-breaking champion with polished race management and strategic feel.",
+      "stats": [
+        { "label": "Pace", "value": 92 },
+        { "label": "Racecraft", "value": 97 },
+        { "label": "Qualifying", "value": 91 },
+        { "label": "Tyre Care", "value": 96 }
+      ]
+    },
+    {
+      "id": "george-russell",
+      "name": "George Russell",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/en/thumb/a/ae/Flag_of_the_United_Kingdom.svg/1920px-Flag_of_the_United_Kingdom.svg.png"
+      },
+      "category": "Driver",
+      "description": "Measured, sharp, and dependable across changing race conditions.",
+      "stats": [
+        { "label": "Pace", "value": 90 },
+        { "label": "Racecraft", "value": 89 },
+        { "label": "Qualifying", "value": 92 },
+        { "label": "Tyre Care", "value": 88 }
+      ]
+    },
+    {
+      "id": "carlos-sainz",
+      "name": "Carlos Sainz",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/en/thumb/9/9a/Flag_of_Spain.svg/1920px-Flag_of_Spain.svg.png"
+      },
+      "category": "Driver",
+      "description": "Tactical racer known for calm execution and adaptable setups.",
+      "stats": [
+        { "label": "Pace", "value": 89 },
+        { "label": "Racecraft", "value": 92 },
+        { "label": "Qualifying", "value": 88 },
+        { "label": "Tyre Care", "value": 91 }
+      ]
+    },
+    {
+      "id": "oscar-piastri",
+      "name": "Oscar Piastri",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/Flag_of_Australia.svg/1920px-Flag_of_Australia.svg.png"
+      },
+      "category": "Driver",
+      "description": "Composed young contender with smooth inputs and rapid learning.",
+      "stats": [
+        { "label": "Pace", "value": 91 },
+        { "label": "Racecraft", "value": 88 },
+        { "label": "Qualifying", "value": 90 },
+        { "label": "Tyre Care", "value": 86 }
+      ]
+    },
+    {
+      "id": "fernando-alonso",
+      "name": "Fernando Alonso",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/en/thumb/9/9a/Flag_of_Spain.svg/1920px-Flag_of_Spain.svg.png"
+      },
+      "category": "Driver",
+      "description": "Veteran tactician who extracts results through timing and race intelligence.",
+      "stats": [
+        { "label": "Pace", "value": 88 },
+        { "label": "Racecraft", "value": 98 },
+        { "label": "Qualifying", "value": 89 },
+        { "label": "Tyre Care", "value": 94 }
+      ]
+    },
+    {
+      "id": "sergio-perez",
+      "name": "Sergio Perez",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Flag_of_Mexico.svg/1920px-Flag_of_Mexico.svg.png"
+      },
+      "category": "Driver",
+      "description": "Street-circuit specialist with a reputation for tyre preservation.",
+      "stats": [
+        { "label": "Pace", "value": 86 },
+        { "label": "Racecraft", "value": 89 },
+        { "label": "Qualifying", "value": 82 },
+        { "label": "Tyre Care", "value": 95 }
+      ]
+    },
+    {
+      "id": "alex-albon",
+      "name": "Alex Albon",
+      "images": {
+        "Flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Flag_of_Thailand.svg/1920px-Flag_of_Thailand.svg.png"
+      },
+      "category": "Driver",
+      "description": "Efficient point-scorer who shines when defending and managing pace.",
+      "stats": [
+        { "label": "Pace", "value": 84 },
+        { "label": "Racecraft", "value": 88 },
+        { "label": "Qualifying", "value": 85 },
+        { "label": "Tyre Care", "value": 87 }
+      ]
+    }
+  ]
+}
