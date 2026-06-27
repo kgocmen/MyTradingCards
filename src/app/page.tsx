@@ -1,26 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { DeckSchema } from "@/lib/deck-schema";
 import type { Deck } from "@/lib/deck-schema";
+import { csvToDeck } from "@/lib/csv-deck";
 import {
   getMissingLocalImages,
   safeFilename,
 } from "@/lib/deck-utils";
-import { storePdfPreviewDraft } from "@/lib/pdf-preview-store";
+import {
+  readPdfPreviewDraft,
+  storePdfPreviewDraft,
+  subscribeToPdfPreviewStore,
+  type PdfPreviewDraft,
+} from "@/lib/pdf-preview-store";
 import sampleDeck from "../../public/samples/F1.json";
 
-const SAMPLE_JSON = JSON.stringify(sampleDeck, null, 2);
+const SAMPLE_DECK = DeckSchema.parse(sampleDeck);
+const SAMPLE_JSON = JSON.stringify(SAMPLE_DECK, null, 2);
+const EMPTY_ARTWORK_FILES = new Map<string, File>();
+
+function getPreviewSnapshot(): PdfPreviewDraft | null {
+  return readPdfPreviewDraft();
+}
+
+function getServerPreviewSnapshot(): null {
+  return null;
+}
 
 export default function Home() {
   const router = useRouter();
-  const [jsonText, setJsonText] = useState(SAMPLE_JSON);
-  const [artworkFiles, setArtworkFiles] = useState<
-      Map<string, File>
-  >(new Map());
+  const draft = useSyncExternalStore(
+      subscribeToPdfPreviewStore,
+      getPreviewSnapshot,
+      getServerPreviewSnapshot,
+  );
+  const [jsonTextOverride, setJsonTextOverride] = useState<
+      string | null
+  >(null);
+  const [artworkFilesOverride, setArtworkFilesOverride] = useState<
+      Map<string, File> | null
+  >(null);
+  const jsonText =
+      jsonTextOverride ??
+      (draft ? JSON.stringify(draft.deck, null, 2) : SAMPLE_JSON);
+  const artworkFiles =
+      artworkFilesOverride ??
+      draft?.artworkFiles ??
+      EMPTY_ARTWORK_FILES;
 
   const [message, setMessage] = useState(
       "Add your JSON and card artwork.",
@@ -29,7 +62,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isOpeningLayout, setIsOpeningLayout] = useState(false);
 
-  async function loadJsonFile(
+  async function loadDeckFile(
       event: ChangeEvent<HTMLInputElement>,
   ): Promise<void> {
     const file = event.target.files?.[0];
@@ -38,8 +71,29 @@ export default function Home() {
       return;
     }
 
-    setJsonText(await file.text());
-    setMessage(`Loaded JSON file: ${file.name}`);
+    const text = await file.text();
+
+    try {
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        const deck = csvToDeck(text, SAMPLE_DECK);
+        setJsonTextOverride(JSON.stringify(deck, null, 2));
+        setMessage(
+            `Loaded CSV file: ${file.name}. Converted names and stats to JSON.`,
+        );
+        return;
+      }
+
+      JSON.parse(text);
+      setJsonTextOverride(text);
+      setMessage(`Loaded JSON file: ${file.name}`);
+    } catch (error) {
+      const messageText =
+          error instanceof Error
+              ? error.message
+              : "Could not load the file.";
+
+      setMessage(messageText);
+    }
   }
 
   function loadArtworkFiles(
@@ -52,7 +106,7 @@ export default function Home() {
       fileMap.set(file.name, file);
     }
 
-    setArtworkFiles(fileMap);
+    setArtworkFilesOverride(fileMap);
     setMessage(`Loaded ${files.length} artwork file(s).`);
   }
 
@@ -107,6 +161,34 @@ export default function Home() {
     return filename;
   }
 
+  function downloadJson(): void {
+    try {
+      const deck = parseDeckFromJson();
+      const blob = new Blob([JSON.stringify(deck, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${
+          safeFilename(deck.deckName) || "trading-cards"
+      }.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setMessage("JSON downloaded.");
+    } catch (error) {
+      const text =
+          error instanceof Error
+              ? error.message
+              : "Could not save the JSON.";
+
+      setMessage(text);
+    }
+  }
+
   async function editLayout(): Promise<void> {
     setIsOpeningLayout(true);
 
@@ -159,19 +241,29 @@ export default function Home() {
   return (
       <main className="min-h-screen bg-slate-950 px-6 py-12 text-slate-100">
         <div className="mx-auto max-w-5xl">
-          <header className="mb-10">
-            <p className="mb-2 font-semibold uppercase tracking-widest text-violet-400">
-              MyTradingCards
-            </p>
+          <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="mb-2 font-semibold uppercase tracking-widest text-violet-400">
+                MyTradingCards
+              </p>
 
-            <h1 className="text-4xl font-bold">
-              Printable trading-card generator
-            </h1>
+              <h1 className="text-4xl font-bold">
+                Printable trading-card generator
+              </h1>
 
-            <p className="mt-3 max-w-2xl text-slate-300">
-              Upload card data and artwork, then generate an
-              A4 duplex-ready PDF.
-            </p>
+              <p className="mt-3 max-w-2xl text-slate-300">
+                Upload card data and artwork, then generate an
+                A4 duplex-ready PDF.
+              </p>
+            </div>
+
+            <button
+                type="button"
+                onClick={downloadJson}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-center font-semibold transition hover:border-slate-500 hover:bg-slate-900"
+            >
+              Save JSON
+            </button>
           </header>
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -181,15 +273,20 @@ export default function Home() {
               </h2>
 
               <label className="mb-2 block text-sm text-slate-300">
-                Upload a JSON file
+                Upload a JSON or CSV file
               </label>
 
               <input
                   type="file"
-                  accept="application/json,.json"
-                  onChange={loadJsonFile}
-                  className="mb-5 block w-full text-sm"
+                  accept="application/json,text/csv,.json,.csv"
+                  onChange={loadDeckFile}
+                  className="mb-2 block w-full text-sm"
               />
+
+              <p className="mb-5 text-sm text-slate-400">
+                CSV import supports name, optional category or
+                description columns, and stat columns.
+              </p>
 
               <label
                   htmlFor="json"
@@ -202,7 +299,7 @@ export default function Home() {
                   id="json"
                   value={jsonText}
                   onChange={(event) =>
-                      setJsonText(event.target.value)
+                      setJsonTextOverride(event.target.value)
                   }
                   spellCheck={false}
                   className="h-[430px] w-full rounded-xl border border-slate-700 bg-slate-950 p-4 font-mono text-sm outline-none focus:border-violet-500"

@@ -16,8 +16,8 @@ export function CardList({
     onRemove: () => void;
 }) {
     return (
-        <aside className="rounded-xl bg-slate-900 p-3">
-            <div className="mb-3 grid grid-cols-2 gap-2">
+        <aside className="flex min-h-0 flex-col rounded-xl bg-slate-900 p-3">
+            <div className="mb-3 grid shrink-0 grid-cols-2 gap-2">
                 <button
                     type="button"
                     onClick={onAdd}
@@ -36,7 +36,7 @@ export function CardList({
                 </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {cards.map((card, index) => (
                     <button
                         key={card.id ?? card.name}

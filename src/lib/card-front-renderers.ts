@@ -19,6 +19,10 @@ import {
     roundedRectangle,
 } from "@/lib/card-renderer-primitives";
 import { resolveImageSource } from "@/lib/card-renderer-sources";
+import {
+    canvasFont,
+    styleColor,
+} from "@/lib/layout-style";
 
 export async function drawLayoutCard(
     context: CanvasRenderingContext2D,
@@ -28,7 +32,11 @@ export async function drawLayoutCard(
 ): Promise<void> {
     const titleBox = boxToPixels(layout.title);
 
-    context.fillStyle = "#b91c1c";
+    context.fillStyle = styleColor(
+        layout.title.style,
+        "backgroundColor",
+        "#b91c1c",
+    );
     context.fillRect(
         titleBox.x,
         titleBox.y,
@@ -42,10 +50,15 @@ export async function drawLayoutCard(
         titleBox.width * 0.9,
         titleBox.height * 0.42,
         18,
+        layout.title.style,
     );
 
-    context.fillStyle = "#ffffff";
-    context.font = `700 ${titleSize}px Arial, sans-serif`;
+    context.fillStyle = styleColor(
+        layout.title.style,
+        "textColor",
+        "#ffffff",
+    );
+    context.font = canvasFont(700, titleSize, layout.title.style);
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(
@@ -55,7 +68,11 @@ export async function drawLayoutCard(
     );
 
     if (card.category) {
-        context.font = `700 ${Math.max(13, titleBox.height * 0.15)}px Arial, sans-serif`;
+        context.font = canvasFont(
+            700,
+            Math.max(13, titleBox.height * 0.15),
+            layout.title.style,
+        );
         context.fillText(
             card.category.toUpperCase(),
             titleBox.x + titleBox.width / 2,
@@ -104,12 +121,25 @@ export async function drawLayoutCard(
         }
 
         context.restore();
-        drawBoxBorder(context, imageBox, "#111827", 4);
+        drawBoxBorder(
+            context,
+            imageBox,
+            styleColor(
+                imageLayout.style,
+                "borderColor",
+                "#111827",
+            ),
+            4,
+        );
     }
 
     const informationBox = boxToPixels(layout.information);
 
-    context.fillStyle = "#ffffff";
+    context.fillStyle = styleColor(
+        layout.information.style,
+        "backgroundColor",
+        "#ffffff",
+    );
     context.fillRect(
         informationBox.x,
         informationBox.y,
@@ -120,9 +150,29 @@ export async function drawLayoutCard(
     const descriptionBox = boxToPixels(
         layout.information.description,
     );
+    const descriptionBackground =
+        layout.information.description.style?.backgroundColor;
 
-    context.fillStyle = "#334155";
-    context.font = `600 ${Math.max(18, descriptionBox.height * 0.27)}px Arial, sans-serif`;
+    if (descriptionBackground) {
+        context.fillStyle = descriptionBackground;
+        context.fillRect(
+            descriptionBox.x,
+            descriptionBox.y,
+            descriptionBox.width,
+            descriptionBox.height,
+        );
+    }
+
+    context.fillStyle = styleColor(
+        layout.information.description.style,
+        "textColor",
+        "#334155",
+    );
+    context.font = canvasFont(
+        600,
+        Math.max(18, descriptionBox.height * 0.27),
+        layout.information.description.style,
+    );
     context.textAlign = "left";
     context.textBaseline = "top";
 
@@ -148,12 +198,13 @@ export async function drawLayoutCard(
             statLayout.label,
             stat?.value ?? "-",
             index,
+            statLayout.style,
         );
     });
 
     context.strokeStyle = "#111827";
-    context.lineWidth = 8;
-    context.strokeRect(18, 18, 714, 1014);
+    context.lineWidth = 10;
+    context.strokeRect(5, 5, 740, 1040);
 }
 
 export async function drawDefaultCard(

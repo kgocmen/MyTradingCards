@@ -10,6 +10,8 @@ import type {
 } from "@/lib/deck-schema";
 import {
     getCardImageReference,
+    getDeckImageReference,
+    isBackImageSlot,
     setCardImageReference,
 } from "@/lib/deck-utils";
 
@@ -19,6 +21,7 @@ export function CardEditPanel({
     message,
     onChangeCard,
     onChangeStat,
+    onChangeImageReference,
     onChangeImageFile,
 }: {
     deck: Deck;
@@ -26,13 +29,17 @@ export function CardEditPanel({
     message: string;
     onChangeCard: (card: Card) => void;
     onChangeStat: (statLabel: string, value: string) => void;
+    onChangeImageReference: (
+        slotName: string,
+        value: string,
+    ) => void;
     onChangeImageFile: (
         slotName: string,
         event: ChangeEvent<HTMLInputElement>,
     ) => void;
 }) {
     return (
-        <section className="space-y-4 rounded-xl bg-slate-900 p-5">
+        <section className="min-h-0 space-y-4 overflow-y-auto rounded-xl bg-slate-900 p-5">
             <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-300">
                     Name
@@ -90,11 +97,19 @@ export function CardEditPanel({
                 </h2>
 
                 {deck.layout?.images.image_list.map((imageLayout) => {
+                    const isSharedBack = isBackImageSlot(
+                        imageLayout.name,
+                    );
                     const reference =
-                        getCardImageReference(
-                            card,
-                            imageLayout.name,
-                        ) ?? "";
+                        (isSharedBack
+                            ? getDeckImageReference(
+                                  deck,
+                                  imageLayout.name,
+                              )
+                            : getCardImageReference(
+                                  card,
+                                  imageLayout.name,
+                              )) ?? "";
 
                     return (
                         <div
@@ -108,13 +123,18 @@ export function CardEditPanel({
                             <input
                                 value={reference}
                                 onChange={(event) =>
-                                    onChangeCard(
-                                        setCardImageReference(
-                                            card,
-                                            imageLayout.name,
-                                            event.target.value,
-                                        ),
-                                    )
+                                    isSharedBack
+                                        ? onChangeImageReference(
+                                              imageLayout.name,
+                                              event.target.value,
+                                          )
+                                        : onChangeCard(
+                                              setCardImageReference(
+                                                  card,
+                                                  imageLayout.name,
+                                                  event.target.value,
+                                              ),
+                                          )
                                 }
                                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-violet-500"
                             />

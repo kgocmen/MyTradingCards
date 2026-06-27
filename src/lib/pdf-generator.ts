@@ -1,7 +1,5 @@
 import {
     PDFDocument,
-    rgb,
-    type PDFPage,
 } from "pdf-lib";
 
 import type { Deck } from "@/lib/deck-schema";
@@ -9,6 +7,10 @@ import {
     renderBackToPng,
     renderCardToPng,
 } from "@/lib/card-renderer";
+import {
+    getCardImageReference,
+    isBackImageSlot,
+} from "@/lib/deck-utils";
 
 const MM_TO_POINTS = 72 / 25.4;
 
@@ -24,8 +26,8 @@ const COLUMNS = 3;
 const ROWS = 3;
 const CARDS_PER_PAGE = COLUMNS * ROWS;
 
-const HORIZONTAL_GAP = 3 * MM_TO_POINTS;
-const VERTICAL_GAP = 4 * MM_TO_POINTS;
+const HORIZONTAL_GAP = 0 * MM_TO_POINTS;
+const VERTICAL_GAP = 0 * MM_TO_POINTS;
 
 const GRID_WIDTH =
     COLUMNS * CARD_WIDTH +
@@ -61,26 +63,26 @@ function getCardPosition(
     return { x, y };
 }
 
-function drawCutBorder(
-    page: PDFPage,
-    x: number,
-    y: number,
-): void {
-    page.drawRectangle({
-        x,
-        y,
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
-        borderWidth: 0.4,
-        borderColor: rgb(0.35, 0.35, 0.35),
-    });
-}
-
 export async function generateDeckPdf(
     deck: Deck,
     artworkFiles: Map<string, File>,
 ): Promise<ArrayBuffer> {
     const pdf = await PDFDocument.create();
+    const backSlot = deck.layout?.images.image_list.find(
+        (imageLayout) => isBackImageSlot(imageLayout.name),
+    );
+    const sharedBackCard =
+        backSlot
+            ? deck.cards.find((card) =>
+                  getCardImageReference(card, backSlot.name),
+              )
+            : undefined;
+    const renderedBack = await renderBackToPng(
+        sharedBackCard ?? deck.cards[0],
+        deck.layout,
+        artworkFiles,
+    );
+    const embeddedBack = await pdf.embedPng(renderedBack);
 
     pdf.setTitle(deck.deckName);
     pdf.setAuthor("MyTradingCards");
@@ -120,8 +122,6 @@ export async function generateDeckPdf(
                 width: CARD_WIDTH,
                 height: CARD_HEIGHT,
             });
-
-            drawCutBorder(frontPage, x, y);
         }
 
         // Back page
@@ -135,12 +135,6 @@ export async function generateDeckPdf(
              * Mirror columns so backs align when printing
              * portrait pages using long-edge duplex printing.
              */
-            const renderedBack = await renderBackToPng(
-                cards[index],
-                deck.layout,
-                artworkFiles,
-            );
-            const embeddedBack = await pdf.embedPng(renderedBack);
             const { x, y } = getCardPosition(index, true);
 
             backPage.drawImage(embeddedBack, {
@@ -149,8 +143,6 @@ export async function generateDeckPdf(
                 width: CARD_WIDTH,
                 height: CARD_HEIGHT,
             });
-
-            drawCutBorder(backPage, x, y);
         }
     }
 

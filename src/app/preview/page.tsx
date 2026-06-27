@@ -13,8 +13,10 @@ import { CardPreview } from "@/components/card-preview";
 import type { Card } from "@/lib/deck-schema";
 import {
     createCard,
+    isBackImageSlot,
     safeFilename,
     setCardImageReference,
+    setDeckImageReference,
 } from "@/lib/deck-utils";
 import { generateDeckPdf } from "@/lib/pdf-generator";
 import {
@@ -82,6 +84,26 @@ export default function PreviewPage() {
         };
 
         updatePdfPreviewDeck(nextDeck);
+    }
+
+    function updateImageReference(
+        slotName: string,
+        value: string,
+    ): void {
+        if (isBackImageSlot(slotName)) {
+            updatePdfPreviewDeck(
+                setDeckImageReference(deck, slotName, value),
+            );
+            return;
+        }
+
+        if (!selectedCard) {
+            return;
+        }
+
+        updateSelectedCard(
+            setCardImageReference(selectedCard, slotName, value),
+        );
     }
 
     function addCard(): void {
@@ -164,6 +186,14 @@ export default function PreviewPage() {
         }
 
         currentDraft.artworkFiles.set(file.name, file);
+
+        if (isBackImageSlot(slotName)) {
+            updatePdfPreviewDeck(
+                setDeckImageReference(deck, slotName, file.name),
+            );
+            return;
+        }
+
         updateSelectedCard(
             setCardImageReference(selectedCard, slotName, file.name),
         );
@@ -249,7 +279,7 @@ export default function PreviewPage() {
                     </div>
                 </header>
 
-                <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)_360px]">
+                <div className="grid min-h-0 gap-5 lg:h-[calc(100vh-12rem)] lg:min-h-[32rem] lg:grid-cols-[220px_minmax(0,1fr)_360px]">
                     <CardList
                         cards={deck.cards}
                         selectedIndex={selectedIndex}
@@ -258,7 +288,7 @@ export default function PreviewPage() {
                         onRemove={removeSelectedCard}
                     />
 
-                    <section className="flex min-h-[70vh] items-start justify-center rounded-xl bg-slate-900 p-6">
+                    <section className="flex min-h-[70vh] items-start justify-center overflow-auto rounded-xl bg-slate-900 p-6 lg:min-h-0">
                         {selectedCard ? (
                             <CardPreview
                                 deck={deck}
@@ -275,6 +305,7 @@ export default function PreviewPage() {
                             message={message}
                             onChangeCard={updateSelectedCard}
                             onChangeStat={updateStat}
+                            onChangeImageReference={updateImageReference}
                             onChangeImageFile={updateImageFile}
                         />
                     ) : null}

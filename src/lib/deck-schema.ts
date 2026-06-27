@@ -5,14 +5,25 @@ const CoordinateSchema = z.tuple([
     z.number().min(0).max(1),
 ]);
 
+const LayoutStyleSchema = z.object({
+    fontFamily: z.string().min(1).optional(),
+    backgroundColor: z.string().min(1).optional(),
+    alternateBackgroundColor: z.string().min(1).optional(),
+    textColor: z.string().min(1).optional(),
+    accentColor: z.string().min(1).optional(),
+    borderColor: z.string().min(1).optional(),
+});
+
 const LayoutBoxSchema = z.object({
     "bottom-left": CoordinateSchema,
     "top-right": CoordinateSchema,
+    style: LayoutStyleSchema.optional(),
 });
 
 const ImageLayoutSchema = LayoutBoxSchema.extend({
     name: z.string().min(1),
     shape: z.string().optional(),
+    url: z.string().min(1).optional(),
 });
 
 export const LayoutSchema = z.object({
@@ -54,3 +65,4 @@ export const DeckSchema = z.object({
 export type Card = z.infer<typeof CardSchema>;
 export type Deck = z.infer<typeof DeckSchema>;
 export type LayoutBox = z.infer<typeof LayoutBoxSchema>;
+export type LayoutStyle = z.infer<typeof LayoutStyleSchema>;

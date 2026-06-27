@@ -5,11 +5,15 @@ import { useMemo } from "react";
 import { boxStyle } from "@/components/card-preview";
 import type { Deck } from "@/lib/deck-schema";
 import {
-    getCardImageReference,
+    getDeckImageReference,
     getImageSource,
     isBackImageSlot,
     isRemoteUrl,
 } from "@/lib/deck-utils";
+import {
+    styleColor,
+    styleFontFamily,
+} from "@/lib/layout-style";
 
 type DeckLayout = NonNullable<Deck["layout"]>;
 
@@ -25,17 +29,16 @@ function BackPreview({
     const backLayout = layout.images.image_list.find((imageLayout) =>
         isBackImageSlot(imageLayout.name),
     );
-    const reference =
-        deck.cards[0] && backLayout
-            ? getCardImageReference(deck.cards[0], backLayout.name)
-            : undefined;
+    const reference = backLayout
+        ? getDeckImageReference(deck, backLayout.name)
+        : undefined;
     const imageSource = useMemo(
         () => getImageSource(reference, files),
         [reference, files],
     );
 
     return (
-        <div className="aspect-[5/7] w-full max-w-sm overflow-hidden rounded border-4 border-slate-950 bg-white shadow-2xl">
+        <div className="aspect-[5/7] w-full max-w-sm overflow-hidden rounded border-[6px] border-slate-950 bg-white shadow-2xl">
             {imageSource ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -68,11 +71,26 @@ export function LayoutPreview({
 }) {
     return (
         <div className="flex w-full flex-wrap items-start justify-center gap-6">
-            <div className="aspect-[5/7] w-full max-w-sm overflow-hidden rounded border-4 border-slate-950 bg-white shadow-2xl">
+            <div className="aspect-[5/7] w-full max-w-sm overflow-hidden rounded border-[6px] border-slate-950 bg-white shadow-2xl">
                 <div className="relative h-full w-full">
                     <div
                         className="absolute flex items-center justify-center bg-red-700 px-3 text-center text-xl font-black text-white"
-                        style={boxStyle(layout.title)}
+                        style={{
+                            ...boxStyle(layout.title),
+                            backgroundColor: styleColor(
+                                layout.title.style,
+                                "backgroundColor",
+                                "#b91c1c",
+                            ),
+                            color: styleColor(
+                                layout.title.style,
+                                "textColor",
+                                "#ffffff",
+                            ),
+                            fontFamily: styleFontFamily(
+                                layout.title.style,
+                            ),
+                        }}
                     >
                         Title
                     </div>
@@ -88,6 +106,11 @@ export function LayoutPreview({
                                 className="absolute flex items-center justify-center overflow-hidden border-2 border-slate-950 bg-slate-100 px-2 text-center text-sm font-black uppercase text-red-800"
                                 style={{
                                     ...boxStyle(imageLayout),
+                                    borderColor: styleColor(
+                                        imageLayout.style,
+                                        "borderColor",
+                                        "#111827",
+                                    ),
                                     zIndex: index + 1,
                                 }}
                             >
@@ -98,12 +121,32 @@ export function LayoutPreview({
 
                     <div
                         className="absolute bg-white"
-                        style={boxStyle(layout.information)}
+                        style={{
+                            ...boxStyle(layout.information),
+                            backgroundColor: styleColor(
+                                layout.information.style,
+                                "backgroundColor",
+                                "#ffffff",
+                            ),
+                        }}
                     />
 
                     <div
                         className="absolute flex items-center px-4 text-sm font-semibold text-slate-700"
-                        style={boxStyle(layout.information.description)}
+                        style={{
+                            ...boxStyle(layout.information.description),
+                            backgroundColor:
+                                layout.information.description.style
+                                    ?.backgroundColor,
+                            color: styleColor(
+                                layout.information.description.style,
+                                "textColor",
+                                "#334155",
+                            ),
+                            fontFamily: styleFontFamily(
+                                layout.information.description.style,
+                            ),
+                        }}
                     >
                         Description
                     </div>
@@ -116,12 +159,44 @@ export function LayoutPreview({
                                     ? "bg-slate-200"
                                     : "bg-slate-100"
                             }`}
-                            style={boxStyle(statLayout)}
+                            style={{
+                                ...boxStyle(statLayout),
+                                backgroundColor: styleColor(
+                                    statLayout.style,
+                                    "backgroundColor",
+                                    index % 2 === 0
+                                        ? "#e2e8f0"
+                                        : "#f8fafc",
+                                ),
+                                fontFamily: styleFontFamily(
+                                    statLayout.style,
+                                ),
+                            }}
                         >
-                            <span className="text-slate-800">
+                            <span
+                                className="text-slate-800"
+                                style={{
+                                    color: styleColor(
+                                        statLayout.style,
+                                        "textColor",
+                                        "#1e293b",
+                                    ),
+                                }}
+                            >
                                 {statLayout.label}
                             </span>
-                            <span className="text-red-800">0</span>
+                            <span
+                                className="text-red-800"
+                                style={{
+                                    color: styleColor(
+                                        statLayout.style,
+                                        "accentColor",
+                                        "#991b1b",
+                                    ),
+                                }}
+                            >
+                                0
+                            </span>
                         </div>
                     ))}
                 </div>

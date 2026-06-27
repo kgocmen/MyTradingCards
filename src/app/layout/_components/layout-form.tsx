@@ -29,10 +29,15 @@ export function LayoutForm({
     onMoveImageLayout: (index: number, direction: -1 | 1) => void;
 }) {
     return (
-        <section className="space-y-4 rounded-xl bg-slate-900 p-5">
+        <section className="space-y-4 rounded-xl bg-slate-900 p-5 lg:max-h-full lg:overflow-y-auto">
             <BoxEditor
                 title="Title"
                 box={layout.title}
+                styleControls={[
+                    "fontFamily",
+                    "backgroundColor",
+                    "textColor",
+                ]}
                 onChange={(box) =>
                     onChangeLayout({
                         ...layout,
@@ -44,6 +49,7 @@ export function LayoutForm({
             <BoxEditor
                 title="Information"
                 box={layout.information}
+                styleControls={["backgroundColor"]}
                 onChange={(box) =>
                     onChangeLayout({
                         ...layout,
@@ -58,6 +64,11 @@ export function LayoutForm({
             <BoxEditor
                 title="Description"
                 box={layout.information.description}
+                styleControls={[
+                    "fontFamily",
+                    "backgroundColor",
+                    "textColor",
+                ]}
                 onChange={(box) =>
                     onChangeLayout({
                         ...layout,
@@ -79,6 +90,11 @@ export function LayoutForm({
                         key={`${imageLayout.name}-${index}`}
                         title={imageLayout.name}
                         box={imageLayout}
+                        styleControls={
+                            imageLayout.name.toLowerCase() === "back"
+                                ? []
+                                : ["borderColor"]
+                        }
                         onChange={(box) =>
                             onChangeImageLayout(index, {
                                 ...imageLayout,
@@ -126,6 +142,12 @@ export function LayoutForm({
                         key={`${statLayout.label}-${index}`}
                         title={statLayout.label}
                         box={statLayout}
+                        styleControls={[
+                            "fontFamily",
+                            "backgroundColor",
+                            "textColor",
+                            "accentColor",
+                        ]}
                         onChange={(box) =>
                             onChangeStatLayout(index, {
                                 ...statLayout,

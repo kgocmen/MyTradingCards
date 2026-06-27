@@ -53,7 +53,7 @@ function drawCardBase(context: CanvasRenderingContext2D): void {
     context.fillStyle = "#ffffff";
     context.fill();
 
-    context.lineWidth = 8;
+    context.lineWidth = 10;
     context.strokeStyle = "#111827";
     context.stroke();
 }
@@ -113,9 +113,10 @@ export async function renderBackToPng(
         isBackImageSlot(imageLayout.name),
     );
     const backReference =
-        card && backLayout
+        backLayout?.url ??
+        (card && backLayout
             ? getCardImageReference(card, backLayout.name)
-            : undefined;
+            : undefined);
     const backSource = resolveImageSource(backReference, artworkFiles);
 
     if (backSource) {
@@ -133,9 +134,9 @@ export async function renderBackToPng(
         drawDefaultBack(context);
     }
 
-    context.lineWidth = 12;
+    context.lineWidth = 14;
     context.strokeStyle = "#111827";
-    context.strokeRect(6, 6, CANVAS_WIDTH - 12, CANVAS_HEIGHT - 12);
+    context.strokeRect(7, 7, CANVAS_WIDTH - 14, CANVAS_HEIGHT - 14);
 
     return canvasToPng(canvas);
 }

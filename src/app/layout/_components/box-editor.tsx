@@ -2,9 +2,37 @@
 
 import type { ReactNode } from "react";
 
-import type { LayoutBox } from "@/lib/deck-schema";
+import type {
+    LayoutBox,
+    LayoutStyle,
+} from "@/lib/deck-schema";
+import { FONT_OPTIONS } from "@/lib/layout-style";
 
 type CornerName = "bottom-left" | "top-right";
+type StyleControl =
+    | "fontFamily"
+    | "backgroundColor"
+    | "alternateBackgroundColor"
+    | "textColor"
+    | "accentColor"
+    | "borderColor";
+
+const STYLE_LABELS: Record<StyleControl, string> = {
+    fontFamily: "Font",
+    backgroundColor: "Background",
+    alternateBackgroundColor: "Alt background",
+    textColor: "Text",
+    accentColor: "Accent",
+    borderColor: "Border",
+};
+
+const STYLE_DEFAULTS: Record<Exclude<StyleControl, "fontFamily">, string> = {
+    backgroundColor: "#ffffff",
+    alternateBackgroundColor: "#f8fafc",
+    textColor: "#111827",
+    accentColor: "#991b1b",
+    borderColor: "#111827",
+};
 
 function clampUnit(value: number): number {
     if (!Number.isFinite(value)) {
@@ -27,6 +55,22 @@ function updateBoxCoordinate(
     return {
         ...box,
         [corner]: nextCoordinate,
+    };
+}
+
+function updateBoxStyle(
+    box: LayoutBox,
+    key: keyof LayoutStyle,
+    value: string,
+): LayoutBox {
+    const nextStyle = {
+        ...(box.style ?? {}),
+        [key]: value,
+    };
+
+    return {
+        ...box,
+        style: nextStyle,
     };
 }
 
@@ -58,11 +102,13 @@ function CoordinateInput({
 export function BoxEditor({
     title,
     box,
+    styleControls = [],
     onChange,
     children,
 }: {
     title: string;
     box: LayoutBox;
+    styleControls?: StyleControl[];
     onChange: (box: LayoutBox) => void;
     children?: ReactNode;
 }) {
@@ -136,6 +182,74 @@ export function BoxEditor({
                     }
                 />
             </div>
+
+            {styleControls.length > 0 ? (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                    {styleControls.map((control) => {
+                        if (control === "fontFamily") {
+                            return (
+                                <label
+                                    key={control}
+                                    className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                >
+                                    <span>{STYLE_LABELS[control]}</span>
+                                    <select
+                                        value={
+                                            box.style?.fontFamily ??
+                                            FONT_OPTIONS[0].value
+                                        }
+                                        onChange={(event) =>
+                                            onChange(
+                                                updateBoxStyle(
+                                                    box,
+                                                    control,
+                                                    event.target.value,
+                                                ),
+                                            )
+                                        }
+                                        className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-sm font-normal normal-case tracking-normal text-slate-100 outline-none focus:border-violet-500"
+                                    >
+                                        {FONT_OPTIONS.map((font) => (
+                                            <option
+                                                key={font.value}
+                                                value={font.value}
+                                            >
+                                                {font.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            );
+                        }
+
+                        return (
+                            <label
+                                key={control}
+                                className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                            >
+                                <span>{STYLE_LABELS[control]}</span>
+                                <input
+                                    type="color"
+                                    value={
+                                        box.style?.[control] ??
+                                        STYLE_DEFAULTS[control]
+                                    }
+                                    onChange={(event) =>
+                                        onChange(
+                                            updateBoxStyle(
+                                                box,
+                                                control,
+                                                event.target.value,
+                                            ),
+                                        )
+                                    }
+                                    className="h-10 w-full rounded-lg border border-slate-700 bg-slate-950 p-1 outline-none focus:border-violet-500"
+                                />
+                            </label>
+                        );
+                    })}
+                </div>
+            ) : null}
         </div>
     );
 }

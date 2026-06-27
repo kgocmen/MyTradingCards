@@ -34,6 +34,27 @@ export function getCardImageReference(
     return entry?.[1];
 }
 
+export function getLayoutImageReference(
+    deck: Deck,
+    slotName: string,
+): string | undefined {
+    const imageLayout = deck.layout?.images.image_list.find(
+        (candidate) =>
+            normalizeKey(candidate.name) === normalizeKey(slotName),
+    );
+
+    return imageLayout?.url;
+}
+
+export function getDeckImageReference(
+    deck: Deck,
+    slotName: string,
+): string | undefined {
+    return getLayoutImageReference(deck, slotName) ?? deck.cards
+        .map((card) => getCardImageReference(card, slotName))
+        .find((reference): reference is string => Boolean(reference));
+}
+
 export function setCardImageReference(
     card: Card,
     slotName: string,
@@ -61,6 +82,55 @@ export function setCardImageReference(
     };
 }
 
+export function setDeckImageReference(
+    deck: Deck,
+    slotName: string,
+    value: string,
+): Deck {
+    if (deck.layout) {
+        return {
+            ...deck,
+            layout: {
+                ...deck.layout,
+                images: {
+                    ...deck.layout.images,
+                    image_list: deck.layout.images.image_list.map(
+                        (imageLayout) => {
+                            if (
+                                normalizeKey(imageLayout.name) !==
+                                normalizeKey(slotName)
+                            ) {
+                                return imageLayout;
+                            }
+
+                            if (!value.trim()) {
+                                const nextImageLayout = {
+                                    ...imageLayout,
+                                };
+
+                                delete nextImageLayout.url;
+                                return nextImageLayout;
+                            }
+
+                            return {
+                                ...imageLayout,
+                                url: value,
+                            };
+                        },
+                    ),
+                },
+            },
+        };
+    }
+
+    return {
+        ...deck,
+        cards: deck.cards.map((card) =>
+            setCardImageReference(card, slotName, value),
+        ),
+    };
+}
+
 export function createCard(deck: Deck, index: number): Card {
     const statLabels =
         deck.layout?.information.stats.map((stat) => stat.label) ??
@@ -81,10 +151,18 @@ export function createCard(deck: Deck, index: number): Card {
 }
 
 export function getDeckImageReferences(deck: Deck): string[] {
-    return deck.cards.flatMap((card) => [
-        ...(card.image ? [card.image] : []),
-        ...Object.values(card.images ?? {}),
-    ]);
+    return [
+        ...(deck.layout?.images.image_list
+            .map((imageLayout) => imageLayout.url)
+            .filter(
+                (reference): reference is string =>
+                    Boolean(reference),
+            ) ?? []),
+        ...deck.cards.flatMap((card) => [
+            ...(card.image ? [card.image] : []),
+            ...Object.values(card.images ?? {}),
+        ]),
+    ];
 }
 
 export function getMissingLocalImages(

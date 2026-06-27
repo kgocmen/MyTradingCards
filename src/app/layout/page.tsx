@@ -254,8 +254,8 @@ export default function LayoutPage() {
                     </div>
                 </header>
 
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_440px]">
-                    <section className="flex min-h-[70vh] items-start justify-center rounded-xl bg-slate-900 p-6">
+                <div className="grid gap-5 lg:h-[calc(100vh-11rem)] lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_440px] lg:items-start">
+                    <section className="flex min-h-[70vh] items-start justify-center overflow-y-auto rounded-xl bg-slate-900 p-6 lg:h-full lg:min-h-0">
                         <LayoutPreview
                             layout={layout}
                             deck={deck}

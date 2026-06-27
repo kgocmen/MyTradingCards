@@ -26,7 +26,8 @@
         {
           "name": "back",
           "bottom-left": [0.6, 0.5],
-          "top-right": [1, 0.7]
+          "top-right": [1, 0.7],
+          "url": "f2.jpg"
         }
       ],
       "bottom-left": [0,0.5],

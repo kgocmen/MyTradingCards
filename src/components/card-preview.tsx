@@ -16,6 +16,10 @@ import {
     isBackImageSlot,
     isRemoteUrl,
 } from "@/lib/deck-utils";
+import {
+    styleColor,
+    styleFontFamily,
+} from "@/lib/layout-style";
 
 export function boxStyle(box: LayoutBox): CSSProperties {
     const [left, bottom] = box["bottom-left"];
@@ -86,11 +90,26 @@ export function CardPreview({
     }
 
     return (
-        <div className="aspect-[5/7] w-full max-w-sm overflow-hidden rounded border-4 border-slate-950 bg-white shadow-2xl">
+        <div className="aspect-[5/7] w-full max-w-sm overflow-hidden rounded border-[6px] border-slate-950 bg-white shadow-2xl">
             <div className="relative h-full w-full">
                 <div
                     className="absolute bg-red-700 text-white"
-                    style={boxStyle(layout.title)}
+                    style={{
+                        ...boxStyle(layout.title),
+                        backgroundColor: styleColor(
+                            layout.title.style,
+                            "backgroundColor",
+                            "#b91c1c",
+                        ),
+                        color: styleColor(
+                            layout.title.style,
+                            "textColor",
+                            "#ffffff",
+                        ),
+                        fontFamily: styleFontFamily(
+                            layout.title.style,
+                        ),
+                    }}
                 >
                     <div className="flex h-full flex-col items-center justify-center px-4 text-center">
                         <div className="text-xl font-black leading-tight">
@@ -119,6 +138,11 @@ export function CardPreview({
                             className="absolute overflow-hidden border-2 border-slate-950"
                             style={{
                                 ...boxStyle(imageLayout),
+                                borderColor: styleColor(
+                                    imageLayout.style,
+                                    "borderColor",
+                                    "#111827",
+                                ),
                                 zIndex: index + 1,
                             }}
                         >
@@ -133,12 +157,32 @@ export function CardPreview({
 
                 <div
                     className="absolute bg-white"
-                    style={boxStyle(layout.information)}
+                    style={{
+                        ...boxStyle(layout.information),
+                        backgroundColor: styleColor(
+                            layout.information.style,
+                            "backgroundColor",
+                            "#ffffff",
+                        ),
+                    }}
                 />
 
                 <div
                     className="absolute px-4 py-3 text-sm font-semibold leading-tight text-slate-700"
-                    style={boxStyle(layout.information.description)}
+                    style={{
+                        ...boxStyle(layout.information.description),
+                        backgroundColor:
+                            layout.information.description.style
+                                ?.backgroundColor,
+                        color: styleColor(
+                            layout.information.description.style,
+                            "textColor",
+                            "#334155",
+                        ),
+                        fontFamily: styleFontFamily(
+                            layout.information.description.style,
+                        ),
+                    }}
                 >
                     {card.description}
                 </div>
@@ -157,12 +201,42 @@ export function CardPreview({
                                     ? "bg-slate-200"
                                     : "bg-slate-100"
                             }`}
-                            style={boxStyle(statLayout)}
+                            style={{
+                                ...boxStyle(statLayout),
+                                backgroundColor: styleColor(
+                                    statLayout.style,
+                                    "backgroundColor",
+                                    index % 2 === 0
+                                        ? "#e2e8f0"
+                                        : "#f8fafc",
+                                ),
+                                fontFamily: styleFontFamily(
+                                    statLayout.style,
+                                ),
+                            }}
                         >
-                            <span className="text-slate-800">
+                            <span
+                                className="text-slate-800"
+                                style={{
+                                    color: styleColor(
+                                        statLayout.style,
+                                        "textColor",
+                                        "#1e293b",
+                                    ),
+                                }}
+                            >
                                 {statLayout.label}
                             </span>
-                            <span className="text-red-800">
+                            <span
+                                className="text-red-800"
+                                style={{
+                                    color: styleColor(
+                                        statLayout.style,
+                                        "accentColor",
+                                        "#991b1b",
+                                    ),
+                                }}
+                            >
                                 {stat?.value ?? "-"}
                             </span>
                         </div>

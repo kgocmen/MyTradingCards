@@ -1,5 +1,12 @@
-import type { LayoutBox } from "@/lib/deck-schema";
+import type {
+    LayoutBox,
+    LayoutStyle,
+} from "@/lib/deck-schema";
 import { isRemoteUrl } from "@/lib/deck-utils";
+import {
+    canvasFont,
+    styleColor,
+} from "@/lib/layout-style";
 
 export const CANVAS_WIDTH = 750;
 export const CANVAS_HEIGHT = 1050;
@@ -121,11 +128,12 @@ export function fitTitle(
     maximumWidth: number,
     maximumSize = 50,
     minimumSize = 25,
+    style?: LayoutStyle,
 ): number {
     let size = maximumSize;
 
     while (size > minimumSize) {
-        context.font = `700 ${size}px Arial, sans-serif`;
+        context.font = canvasFont(700, size, style);
 
         if (context.measureText(text).width <= maximumWidth) {
             return size;
@@ -230,12 +238,21 @@ export function drawStatRow(
     label: string,
     value: string | number,
     index: number,
+    style?: LayoutStyle,
 ): void {
-    context.fillStyle = index % 2 === 0 ? "#e2e8f0" : "#f8fafc";
+    context.fillStyle = styleColor(
+        style,
+        "backgroundColor",
+        index % 2 === 0 ? "#e2e8f0" : "#f8fafc",
+    );
     context.fillRect(box.x, box.y, box.width, box.height);
 
-    context.fillStyle = "#1e293b";
-    context.font = `700 ${Math.max(16, box.height * 0.36)}px Arial, sans-serif`;
+    context.fillStyle = styleColor(style, "textColor", "#1e293b");
+    context.font = canvasFont(
+        700,
+        Math.max(16, box.height * 0.36),
+        style,
+    );
     context.textAlign = "left";
     context.textBaseline = "middle";
     context.fillText(
@@ -245,8 +262,12 @@ export function drawStatRow(
         box.width * 0.62,
     );
 
-    context.fillStyle = "#991b1b";
-    context.font = `700 ${Math.max(18, box.height * 0.44)}px Arial, sans-serif`;
+    context.fillStyle = styleColor(style, "accentColor", "#991b1b");
+    context.font = canvasFont(
+        700,
+        Math.max(18, box.height * 0.44),
+        style,
+    );
     context.textAlign = "right";
     context.fillText(
         String(value),
